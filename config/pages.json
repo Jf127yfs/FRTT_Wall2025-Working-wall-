@@ -9,6 +9,14 @@
       "duration": 10000
     },
     {
+      "id": "map",
+      "name": "System Map",
+      "file": "Map.html",
+      "description": "System architecture and data flow overview",
+      "autoAdvance": true,
+      "duration": 15000
+    },
+    {
       "id": "wall",
       "name": "The Wall",
       "file": "Wall.html",

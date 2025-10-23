@@ -73,6 +73,7 @@ function onOpen() {
     .addItem('🖥️ Open Display Controller', 'openDisplayController')
     .addSeparator()
     .addItem('📊 View The Wall', 'openWall')
+    .addItem('📍 View System Map', 'openMap')
     .addItem('✅ Open Check-In Interface', 'openCheckIn')
     .addItem('🎬 Open Intro Page', 'openIntro')
     .addSeparator()
@@ -100,6 +101,7 @@ function onOpen() {
  *   ?page=intro    - Introduction/welcome screen
  *   ?page=wall     - The Wall visualization
  *   ?page=checkin  - Guest check-in interface
+ *   ?page=map      - System map/overview
  */
 function doGet(e) {
   if (!e || !e.parameter) {
@@ -137,6 +139,13 @@ function doGet(e) {
         return HtmlService.createTemplateFromFile('Wall')
           .evaluate()
           .setTitle('The Wall - Panopticon')
+          .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+
+      case 'map':
+        // System map and overview
+        return HtmlService.createTemplateFromFile('Map')
+          .evaluate()
+          .setTitle('System Map - Panopticon')
           .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 
       case 'test':
@@ -404,6 +413,26 @@ function openWall() {
   SpreadsheetApp.getUi().showModalDialog(
     HtmlService.createHtmlOutput(html).setWidth(400).setHeight(150),
     'The Wall'
+  );
+}
+
+function openMap() {
+  const url = ScriptApp.getService().getUrl() + '?page=map';
+  const html = `
+    <html>
+      <body>
+        <p>Open this URL in a new tab:</p>
+        <p><a href="${url}" target="_blank">${url}</a></p>
+        <script>
+          window.open('${url}', '_blank');
+          google.script.host.close();
+        </script>
+      </body>
+    </html>
+  `;
+  SpreadsheetApp.getUi().showModalDialog(
+    HtmlService.createHtmlOutput(html).setWidth(400).setHeight(150),
+    'System Map'
   );
 }
 
