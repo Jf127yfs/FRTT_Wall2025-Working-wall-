@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Wall - Display Controller</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #000000;
+      color: #00ff00;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* Main iframe container */
+    .iframe-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    .iframe-container.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .iframe-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Control panel */
+    .control-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 20, 0, 0.95);
+      border-top: 2px solid #00ff00;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10000;
+      transform: translateY(100%);
+      transition: transform 0.3s ease-out;
+      box-shadow: 0 -5px 20px rgba(0, 255, 0, 0.3);
+    }
+
+    .control-panel.visible {
+      transform: translateY(0);
+    }
+
+    .control-panel:hover {
+      transform: translateY(0);
+    }
+
+    /* Hover trigger at bottom */
+    .hover-trigger {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 30px;
+      z-index: 9999;
+    }
+
+    .control-left,
+    .control-center,
+    .control-right {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .control-center {
+      flex: 1;
+      justify-content: center;
+    }
+
+    /* Page indicator */
+    .page-indicator {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .page-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(0, 255, 0, 0.3);
+      border: 2px solid #00ff00;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .page-dot:hover {
+      transform: scale(1.3);
+      box-shadow: 0 0 10px #00ff00;
+    }
+
+    .page-dot.active {
+      background: #00ff00;
+      box-shadow: 0 0 15px #00ff00;
+      animation: pulse 2s infinite;
+    }
+
+    .page-dot::after {
+      content: attr(data-name);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 50, 0, 0.95);
+      color: #00ff00;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 11px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      margin-bottom: 10px;
+      border: 1px solid #00ff00;
+    }
+
+    .page-dot:hover::after {
+      opacity: 1;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 15px #00ff00; }
+      50% { box-shadow: 0 0 25px #00ff00; }
+    }
+
+    /* Buttons */
+    .control-btn {
+      background: transparent;
+      border: 2px solid #00ff00;
+      color: #00ff00;
+      padding: 8px 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: bold;
+    }
+
+    .control-btn:hover {
+      background: #00ff00;
+      color: #000;
+      box-shadow: 0 0 15px #00ff00;
+      transform: translateY(-2px);
+    }
+
+    .control-btn:active {
+      transform: translateY(0);
+    }
+
+    .control-btn.active {
+      background: #00ff00;
+      color: #000;
+    }
+
+    /* Status display */
+    .status-display {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      color: #00ffff;
+    }
+
+    .status-label {
+      color: #00ff00;
+      font-weight: bold;
+    }
+
+    /* Timer display */
+    .timer {
+      font-size: 14px;
+      font-weight: bold;
+      color: #ffff00;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    /* Fullscreen toggle */
+    .fullscreen-btn {
+      padding: 8px 12px;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 20000;
+      opacity: 1;
+      transition: opacity 0.5s;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(0, 255, 0, 0.3);
+      border-top: 4px solid #00ff00;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #00ff00;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    /* Navigation arrows */
+    .nav-arrow {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0, 50, 0, 0.8);
+      border: 2px solid #00ff00;
+      color: #00ff00;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 9998;
+      transition: all 0.3s;
+      opacity: 0;
+    }
+
+    .nav-arrow:hover,
+    .hover-trigger:hover ~ .nav-arrow {
+      opacity: 1;
+      box-shadow: 0 0 20px #00ff00;
+    }
+
+    .nav-arrow.left {
+      left: 20px;
+    }
+
+    .nav-arrow.right {
+      right: 20px;
+    }
+
+    /* Auto-play progress bar */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 3px;
+      background: linear-gradient(90deg, #00ff00, #00ffff);
+      transition: width 0.1s linear;
+      z-index: 10001;
+      box-shadow: 0 0 10px #00ff00;
+    }
+
+    .progress-bar.hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Initializing Display...</div>
+  </div>
+
+  <!-- Progress bar for auto-play -->
+  <div class="progress-bar" id="progressBar"></div>
+
+  <!-- Navigation arrows -->
+  <div class="nav-arrow left" id="prevBtn">◀</div>
+  <div class="nav-arrow right" id="nextBtn">▶</div>
+
+  <!-- Hover trigger for control panel -->
+  <div class="hover-trigger"></div>
+
+  <!-- Control panel -->
+  <div class="control-panel" id="controlPanel">
+    <div class="control-left">
+      <button class="control-btn" id="autoPlayBtn">Auto Play: OFF</button>
+      <div class="status-display">
+        <span class="status-label">Timer:</span>
+        <span class="timer" id="timer">--</span>
+      </div>
+    </div>
+
+    <div class="control-center">
+      <div class="page-indicator" id="pageIndicator">
+        <!-- Dots will be generated by JS -->
+      </div>
+    </div>
+
+    <div class="control-right">
+      <div class="status-display">
+        <span class="status-label">Page:</span>
+        <span id="pageName">Loading...</span>
+      </div>
+      <button class="control-btn fullscreen-btn" id="fullscreenBtn">⛶</button>
+      <button class="control-btn" id="reloadBtn">↻ Reload</button>
+    </div>
+  </div>
+
+  <!-- Page containers -->
+  <div id="pageContainers"></div>
+
+  <script>
+    // Configuration
+    const config = {
+      pages: [
+        {
+          id: 'intro',
+          name: 'Introduction',
+          url: '?page=intro',
+          autoAdvance: true,
+          duration: 10000 // 10 seconds
+        },
+        {
+          id: 'wall',
+          name: 'The Wall',
+          url: '?page=wall',
+          autoAdvance: false,
+          duration: 0
+        },
+        {
+          id: 'checkin',
+          name: 'Check-In',
+          url: '?page=checkin',
+          autoAdvance: false,
+          duration: 0
+        }
+      ],
+      transitionDuration: 500
+    };
+
+    // State
+    let currentPageIndex = 0;
+    let autoPlayEnabled = false;
+    let autoPlayTimer = null;
+    let remainingTime = 0;
+    let timerInterval = null;
+    let iframes = [];
+
+    // Initialize
+    window.addEventListener('load', init);
+
+    function init() {
+      console.log('Display system initializing...');
+
+      // Create iframes for each page
+      createIframes();
+
+      // Create page indicators
+      createPageIndicators();
+
+      // Setup event listeners
+      setupEventListeners();
+
+      // Load first page
+      setTimeout(() => {
+        loadPage(0);
+        hideLoading();
+      }, 1000);
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', handleKeyboard);
+
+      console.log('Display system ready');
+    }
+
+    function createIframes() {
+      const container = document.getElementById('pageContainers');
+
+      config.pages.forEach((page, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'iframe-container hidden';
+        wrapper.id = `page-${page.id}`;
+
+        const iframe = document.createElement('iframe');
+        iframe.id = `iframe-${page.id}`;
+        iframe.src = ''; // Will be set when loading
+        iframe.allow = 'camera; microphone; fullscreen';
+
+        wrapper.appendChild(iframe);
+        container.appendChild(wrapper);
+
+        iframes.push({
+          wrapper: wrapper,
+          iframe: iframe,
+          loaded: false
+        });
+      });
+
+      console.log(`Created ${iframes.length} iframe containers`);
+    }
+
+    function createPageIndicators() {
+      const indicator = document.getElementById('pageIndicator');
+
+      config.pages.forEach((page, index) => {
+        const dot = document.createElement('div');
+        dot.className = 'page-dot';
+        dot.dataset.index = index;
+        dot.dataset.name = page.name;
+        dot.addEventListener('click', () => loadPage(index));
+        indicator.appendChild(dot);
+      });
+    }
+
+    function setupEventListeners() {
+      document.getElementById('prevBtn').addEventListener('click', previousPage);
+      document.getElementById('nextBtn').addEventListener('click', nextPage);
+      document.getElementById('autoPlayBtn').addEventListener('click', toggleAutoPlay);
+      document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+      document.getElementById('reloadBtn').addEventListener('click', reloadCurrentPage);
+
+      // Show control panel on hover at bottom
+      const trigger = document.querySelector('.hover-trigger');
+      trigger.addEventListener('mouseenter', () => {
+        document.getElementById('controlPanel').classList.add('visible');
+      });
+    }
+
+    function loadPage(index) {
+      console.log(`Loading page ${index}: ${config.pages[index].name}`);
+
+      // Stop auto-play timer
+      stopTimer();
+
+      // Hide current page
+      if (iframes[currentPageIndex]) {
+        iframes[currentPageIndex].wrapper.classList.add('hidden');
+      }
+
+      // Update current index
+      currentPageIndex = index;
+      const page = config.pages[index];
+
+      // Load iframe if not loaded
+      if (!iframes[index].loaded) {
+        const baseUrl = window.location.href.split('?')[0];
+        iframes[index].iframe.src = baseUrl + page.url;
+        iframes[index].loaded = true;
+      }
+
+      // Show new page after transition
+      setTimeout(() => {
+        iframes[index].wrapper.classList.remove('hidden');
+      }, config.transitionDuration);
+
+      // Update UI
+      updatePageIndicator();
+      document.getElementById('pageName').textContent = page.name;
+
+      // Start auto-play timer if enabled
+      if (autoPlayEnabled && page.autoAdvance && page.duration > 0) {
+        startTimer(page.duration);
+      } else {
+        document.getElementById('timer').textContent = '--';
+      }
+    }
+
+    function updatePageIndicator() {
+      const dots = document.querySelectorAll('.page-dot');
+      dots.forEach((dot, index) => {
+        if (index === currentPageIndex) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+    }
+
+    function nextPage() {
+      const nextIndex = (currentPageIndex + 1) % config.pages.length;
+      loadPage(nextIndex);
+    }
+
+    function previousPage() {
+      const prevIndex = (currentPageIndex - 1 + config.pages.length) % config.pages.length;
+      loadPage(prevIndex);
+    }
+
+    function toggleAutoPlay() {
+      autoPlayEnabled = !autoPlayEnabled;
+      const btn = document.getElementById('autoPlayBtn');
+
+      if (autoPlayEnabled) {
+        btn.textContent = 'Auto Play: ON';
+        btn.classList.add('active');
+
+        const page = config.pages[currentPageIndex];
+        if (page.autoAdvance && page.duration > 0) {
+          startTimer(page.duration);
+        }
+      } else {
+        btn.textContent = 'Auto Play: OFF';
+        btn.classList.remove('active');
+        stopTimer();
+      }
+
+      console.log(`Auto-play ${autoPlayEnabled ? 'enabled' : 'disabled'}`);
+    }
+
+    function startTimer(duration) {
+      stopTimer();
+
+      remainingTime = duration;
+      const progressBar = document.getElementById('progressBar');
+      progressBar.classList.remove('hidden');
+      progressBar.style.width = '0%';
+
+      const startTime = Date.now();
+
+      timerInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        remainingTime = duration - elapsed;
+
+        if (remainingTime <= 0) {
+          stopTimer();
+          nextPage();
+          return;
+        }
+
+        // Update timer display
+        const seconds = Math.ceil(remainingTime / 1000);
+        document.getElementById('timer').textContent = seconds + 's';
+
+        // Update progress bar
+        const progress = (elapsed / duration) * 100;
+        progressBar.style.width = progress + '%';
+      }, 100);
+
+      console.log(`Timer started: ${duration}ms`);
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+
+      document.getElementById('progressBar').classList.add('hidden');
+      document.getElementById('timer').textContent = '--';
+    }
+
+    function reloadCurrentPage() {
+      console.log('Reloading current page');
+      iframes[currentPageIndex].iframe.src = iframes[currentPageIndex].iframe.src;
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.error('Fullscreen request failed:', err);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    function handleKeyboard(e) {
+      switch(e.key) {
+        case 'ArrowLeft':
+          previousPage();
+          break;
+        case 'ArrowRight':
+          nextPage();
+          break;
+        case ' ':
+          e.preventDefault();
+          toggleAutoPlay();
+          break;
+        case 'f':
+          toggleFullscreen();
+          break;
+        case 'r':
+          reloadCurrentPage();
+          break;
+      }
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').classList.add('hidden');
+    }
+
+    // Log for debugging
+    console.log('Display Controller loaded');
+    console.log('Pages configured:', config.pages.length);
+    console.log('Keyboard shortcuts:');
+    console.log('  ← → : Navigate pages');
+    console.log('  Space : Toggle auto-play');
+    console.log('  F : Toggle fullscreen');
+    console.log('  R : Reload current page');
+  </script>
+</body>
+</html>

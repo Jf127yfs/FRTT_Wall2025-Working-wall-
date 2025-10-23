@@ -1,0 +1,35 @@
+{
+  "pages": [
+    {
+      "id": "intro",
+      "name": "Introduction",
+      "file": "Intro.html",
+      "description": "Terminal-style welcome screen",
+      "autoAdvance": true,
+      "duration": 10000
+    },
+    {
+      "id": "wall",
+      "name": "The Wall",
+      "file": "Wall.html",
+      "description": "Live guest connection visualization",
+      "autoAdvance": false,
+      "duration": 0
+    },
+    {
+      "id": "checkin",
+      "name": "Check-In",
+      "file": "CheckInInterface.html",
+      "description": "Guest check-in interface",
+      "autoAdvance": false,
+      "duration": 0
+    }
+  ],
+  "settings": {
+    "defaultPage": "intro",
+    "enableAutoPlay": true,
+    "transitionDuration": 500,
+    "showNavigation": true,
+    "fullscreenMode": true
+  }
+}
